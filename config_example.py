@@ -180,6 +180,8 @@ XPATH = {
         'SUBMISSION_DETAIL_ATTACHMENTS': '//*[@id="smccontent"]/table',
 
         'SUBMISSION_DETAIL_ATTACHMENTS_CONTAINER_CLASSNAME': 'smcdocboxright',
+
+        'SUBMISSION_DETAIL_CONTENT': '//*[@class="smcdocmsword"]',
     },
     'PHP': {
         # session title within the session details page
@@ -212,7 +214,9 @@ XPATH = {
 
         'SUBMISSION_DETAIL_ATTACHMENTS': '//*[@id="smccontent"]//table',
 
-        'SUBMISSION_DETAIL_ATTACHMENTS_CONTAINER_CLASSNAME': 'smcdocbox'
+        'SUBMISSION_DETAIL_ATTACHMENTS_CONTAINER_CLASSNAME': 'smcdocbox',
+
+        'SUBMISSION_DETAIL_CONTENT': '//*[@class="smcdocmsword"]',
     }
 }
 
