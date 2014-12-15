@@ -40,6 +40,7 @@ import hashlib
 import magic
 import os
 import logging
+import html2text
 
 
 class Scraper(object):
@@ -553,6 +554,23 @@ class Scraper(object):
                                         got_attachment = True
                                     if got_attachment:
                                         submission.attachments.append(attachment)
+
+            # content area
+            content = []
+            containers = dom.xpath(self.xpath['SUBMISSION_DETAIL_CONTENT'])
+            for container in containers:
+                if container.text is not None:
+                    content.append(etree.tostring(container))
+            submission.docs = content
+
+        # collect all plaintext
+        plaintext = submission.title.lower()
+        md = ""
+        for d in submission.docs:
+            plaintext = plaintext + " " + html2text.html2text(d.lower())
+            md = md + "\n\n\n--------------------------------------------------------------------------------\n\n\n" + html2text.html2text(d)
+        submission.markdown = md
+
 
         # forcing overwrite=True here
         oid = self.db.save_submission(submission)
