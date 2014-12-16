@@ -40,6 +40,7 @@ import hashlib
 import magic
 import os
 import logging
+import re
 import html2text
 
 
@@ -63,6 +64,10 @@ class Scraper(object):
         self.template_system = None
         self.urls = None
         self.xpath = None
+
+        # read all the streets
+        streets = self.db.db.streets.find({'city' : config.CITY_NAME})
+        self.streets = dict([(s['name'], s) for s in streets])
 
     def work_from_queue(self):
         """
@@ -568,6 +573,8 @@ class Scraper(object):
                     content.append(etree.tostring(container))
             submission.docs = content
 
+
+
         # collect all plaintext
         plaintext = submission.title.lower()
         md = ""
@@ -576,6 +583,23 @@ class Scraper(object):
             md = md + "\n\n\n--------------------------------------------------------------------------------\n\n\n" + html2text.html2text(d)
         submission.markdown = md
 
+        # geo locations
+        streets = {}
+        geolocations = []
+        geolocation = None
+        for street in self.streets.keys():
+            if re.search(r"\b" + re.escape(street) + r"\b", plaintext):
+                s = self.streets[street]
+                streets[s['original']] = s['_id']
+                if "lat" in s:
+                    geolocations.append(
+                        {'lat' : s["lat"], 'lon' : s["lng"], 'name' : s['original']}
+                    )
+                    # we now store the location of the first street in our database for the geo index
+                    if geolocation is None:         
+                        geolocation = {'lat' : s["lat"], 'lon' : s["lng"]}
+        submission.geolocations = geolocations
+        submission.geolocation = geolocation
 
         # forcing overwrite=True here
         oid = self.db.save_submission(submission)
