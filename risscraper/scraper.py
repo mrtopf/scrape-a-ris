@@ -273,12 +273,17 @@ class Scraper(object):
                 if row_id is not None:
                     # Agendaitem main row
                     agendaitem_id = row_id.rsplit('_', 1)[1]
+                    if len(fields[1]) == 2:
+                        subject = fields[1][0].text
+                    else:
+                        subject = "; ".join(fields[1].xpath('./text()'))
                     agendaitems[agendaitem_id] = {}
                     agendaitems[agendaitem_id]['id'] = int(agendaitem_id)
                     if number is not None:
                         agendaitems[agendaitem_id]['number'] = number
-                    agendaitems[agendaitem_id]['subject'] = "; ".join(fields[1].xpath('./text()'))
+                    agendaitems[agendaitem_id]['subject'] = subject
                     agendaitems[agendaitem_id]['public'] = public
+
                     # submission links
                     links = row.xpath(self.xpath['SESSION_DETAIL_AGENDA_ROWS_SUBMISSION_LINK'])
                     submissions = []
