@@ -517,12 +517,30 @@ class Scraper(object):
         # gathering session-attachment ids fpr later exclusion
         found_attachments = []
         rows = dom.xpath(self.xpath['SUBMISSION_DETAIL_AGENDA_ROWS'])
+        consultation_list = []
+
         for row in rows:
+
+            # gather consultations
+            date = row[0][0].text
+            url = row[0][0].attrib['href']
+            committee = row[1].text
+            topnr = row[2].text
+            action = [row[3].text]
+            consultation_list.append({
+                'date' : datetime.datetime.strptime(date.strip(), "%d.%m.%Y"),
+                'url' : self.config.BASE_URL+url,
+                'committee' : committee,
+                'action' : action,
+                'topnr' : topnr
+            })
+
             formfields = row.xpath('.//input[@type="hidden"][@name="DT"]')
             if len(formfields):
                 attachment_id = formfields[0].get('value')
                 if attachment_id is not None:
                     found_attachments.append(attachment_id)
+        submission.consultation = consultation_list
 
         # submission-related attachments
         submission.attachments = []
