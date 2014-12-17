@@ -29,6 +29,8 @@ import parse
 import datetime
 import time
 import queue
+import urlparse
+import requests
 from model.session import Session
 from model.attachment import Attachment
 from model.submission import Submission
@@ -401,6 +403,14 @@ class Scraper(object):
         # TODO: add this committee to the queue
         # TODO: read session participants
 
+    def parse_attachment_url(self, url):
+        """parse an attachment url into an ID if possible"""
+        p = urlparse.urlparse(url)
+        if p.path!="getfile.php":
+            return None
+        q = urlparse.parse_qs(p.query)
+        return q.get("id", [None])[0]
+
     def get_submission(self, submission_url=None, submission_id=None):
         """
         Load submission (Vorlage) details for the submission given by detail page URL
@@ -413,7 +423,6 @@ class Scraper(object):
             parsed = parse.search(self.urls['SUBMISSION_DETAIL_PARSE_PATTERN'], submission_url)
             submission_id = parsed['submission_id']
 
-        print submission_url
         logging.info("Getting submission %d from %s", submission_id, submission_url)
 
         submission = Submission(numeric_id=submission_id)
@@ -539,9 +548,11 @@ class Scraper(object):
                 'topnr' : topnr
             })
 
-            formfields = row.xpath('.//input[@type="hidden"][@name="DT"]')
+            formfields = row.xpath('.//a[@target="_blank"]')
             if len(formfields):
-                attachment_id = formfields[0].get('value')
+                for f in formfields:
+                    url = f.attrib['href']
+                    attachment_id = self.parse_attachment_url(url)
                 if attachment_id is not None:
                     found_attachments.append(attachment_id)
         submission.consultation = consultation_list
@@ -566,34 +577,21 @@ class Scraper(object):
                 continue
             rows = container.xpath('.//tr')
             for row in rows:
-                forms = row.xpath('.//form')
-                for form in forms:
-                    name = " ".join(row.xpath('./td/text()')).strip()
-                    for hidden_field in form.xpath('input[@name="DT"]'):
-                        attachment_id = hidden_field.get('value')
-                        if attachment_id in found_attachments:
-                            continue
-                        attachment = Attachment(
-                            identifier=attachment_id,
-                            name=name)
-                        #print attachment_id
-                        # Traversing the whole mechanize response to submit this form
-                        for mform in mechanize_forms:
-                            #print "Form found: '%s'" % mform
-                            for control in mform.controls:
-                                if control.name == 'DT' and control.value == attachment_id:
-                                    got_attachment = False
-                                    try:
-                                        attachment = self.get_attachment_file(attachment, mform)
-                                        got_attachment = True
-                                    except:
-                                        # Second attempt in case of a stupid network error
-                                        # (see #22)
-                                        time.sleep(3)
-                                        attachment = self.get_attachment_file(attachment, mform)
-                                        got_attachment = True
-                                    if got_attachment:
-                                        submission.attachments.append(attachment)
+                attachment_links = row.xpath(".//a")
+                for link in attachment_links:
+                    url = link.attrib["href"]
+                    attachment_id = self.parse_attachment_url(link.attrib["href"])
+                    if attachment_id in found_attachments:
+                        continue
+                    attachment = Attachment(
+                        identifier=attachment_id,
+                        name=link.attrib['title'])
+
+                    r = requests.get(self.config.BASE_URL+"getfile.php?id=%s&type=do" %attachment_id)
+                    attachment.content = r.content
+                    attachment.mimetype = magic.from_buffer(attachment.content, mime=True)
+                    attachment.filename = self.make_attachment_filename(attachment.identifier, attachment.mimetype)
+                    submission.attachments.append(attachment)
 
             # content area
             content = []
