@@ -43,6 +43,7 @@ import logging
 import re
 import html2text
 
+TIME_MARKER = datetime.datetime(1903,1,1) # marker for no date being found
 
 class Scraper(object):
 
@@ -412,6 +413,7 @@ class Scraper(object):
             parsed = parse.search(self.urls['SUBMISSION_DETAIL_PARSE_PATTERN'], submission_url)
             submission_id = parsed['submission_id']
 
+        print submission_url
         logging.info("Getting submission %d from %s", submission_id, submission_url)
 
         submission = Submission(numeric_id=submission_id)
@@ -519,6 +521,8 @@ class Scraper(object):
         rows = dom.xpath(self.xpath['SUBMISSION_DETAIL_AGENDA_ROWS'])
         consultation_list = []
 
+        last_discussed = TIME_MARKER
+
         for row in rows:
 
             # gather consultations
@@ -541,6 +545,14 @@ class Scraper(object):
                 if attachment_id is not None:
                     found_attachments.append(attachment_id)
         submission.consultation = consultation_list
+
+        # compute last discussed date
+        dates = [m['date'] for m in consultation_list]
+        if len(dates)>0:
+            submission.last_discussed = max(dates) # get the highest date
+        else:
+            submission.last_discussed = TIME_MARKER 
+
 
         # submission-related attachments
         submission.attachments = []

@@ -34,7 +34,7 @@ class Submission(Document):
     def __init__(self, numeric_id, identifier=None, title=None, subject=None, type=None,
                  date=None, original_url=None, attachments=None, superordinate=None, 
                  docs = [], markdown = None, geolocations = {}, geolocation = None,
-                 consultation = []):
+                 consultation = [], last_discussed = None):
         self.numeric_id = numeric_id
         self.identifier = identifier
         self.subject = subject
@@ -49,6 +49,7 @@ class Submission(Document):
         self.geolocations = geolocations
         self.geolocation = geolocation
         self.consultation = consultation
+        self.last_discussed = last_discussed
         super(Submission, self).__init__()
 
     @property
