@@ -540,10 +540,23 @@ class Scraper(object):
             committee = row[1].text
             topnr = row[2].text
             action = [row[3].text]
+
+            # get session related info
+            # retrieve session id for session
+            p = urlparse.urlparse(url)
+            params = urlparse.parse_qs(p.query)
+            sid = params.get("__ksinr", None)
+            meeting = "Ausschusssitzung %s" %committee
+            if sid is not None:
+                sid = int(sid[0])
+                session = self.db.get_object('sessions', 'numeric_id', sid)
+                meeting = "%s %s" %(session['identifier'], session['description'])
+                
             consultation_list.append({
                 'date' : datetime.datetime.strptime(date.strip(), "%d.%m.%Y"),
                 'url' : self.config.BASE_URL+url,
                 'committee' : committee,
+                'meeting' : meeting,
                 'action' : action,
                 'topnr' : topnr
             })
